@@ -6,6 +6,7 @@ import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Component;
 
 import java.util.Collection;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * @author ccphamy
@@ -16,7 +17,7 @@ public class ExecuteAsyncEvent {
 
 
     @Async
-    public void checkStudent(long identify, Student student, Collection<Student> students) {
+    public void checkStudent(long identify, Student student, Collection<Student> students, AtomicInteger signal) {
         log.info(" Thread [{}] Identify [{}] => {}", Thread.currentThread().getName(), identify, student.toBaseString());
 
         student.setId(identify);
@@ -26,6 +27,6 @@ public class ExecuteAsyncEvent {
 
         students.add(student);
         // V操作
-        ThreadControl.SIGNAL.getAndIncrement();
+        signal.getAndIncrement();
     }
 }

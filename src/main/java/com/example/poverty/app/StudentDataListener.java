@@ -9,6 +9,7 @@ import lombok.extern.slf4j.Slf4j;
 import java.util.Collections;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
 /**
@@ -21,6 +22,7 @@ import java.util.concurrent.atomic.AtomicLong;
 public class StudentDataListener extends AnalysisEventListener<Student> {
 
     private AtomicLong identify = new AtomicLong(0);
+    private AtomicInteger signal = new AtomicInteger(ThreadControl.QUEUE_MAX);
 
     /**
      * 学生信息
@@ -31,7 +33,7 @@ public class StudentDataListener extends AnalysisEventListener<Student> {
     public void invoke(Student data, AnalysisContext context) {
         boolean run = false;
 
-        while (ThreadControl.SIGNAL.get() < 1) {
+        while (signal.get() < 1) {
             try {
                 Thread.sleep(100);
             } catch (InterruptedException e) {
@@ -41,15 +43,15 @@ public class StudentDataListener extends AnalysisEventListener<Student> {
 
         while (!run) {
             // P操作
-            int var = ThreadControl.SIGNAL.getAndDecrement();
+            int var = signal.getAndDecrement();
             if (var < 1) {
                 /**
                  * 进入等待(抢不到)，继续阻塞
                  */
-                ThreadControl.SIGNAL.getAndIncrement();
+                signal.getAndIncrement();
             } else {
                 run = true;
-                SpringBeanUtil.getBean(ExecuteAsyncEvent.class).checkStudent(identify.getAndIncrement(), data, students);
+                SpringBeanUtil.getBean(ExecuteAsyncEvent.class).checkStudent(identify.getAndIncrement(), data, students, signal);
             }
         }
 
@@ -61,7 +63,7 @@ public class StudentDataListener extends AnalysisEventListener<Student> {
 
         while (students.size() != identify.get()) {
 
-            log.info("等待所有线程执行完毕... 当前状态 => {} => {}", identify.get(), students.size());
+            log.info("等待所有线程执行完毕 当前状态 => {} => {}", identify.get(), students.size());
             try {
                 Thread.sleep(1000);
             } catch (InterruptedException e) {
@@ -69,6 +71,7 @@ public class StudentDataListener extends AnalysisEventListener<Student> {
             }
         }
         if (students.size() != 0) {
+            log.info("线程执行完毕");
             StudentDataUtil.writeResultByExcel(ThreadControl.READ_EXCEL_PATH + System.nanoTime() + ".xlsx", "sheet", students);
             return;
         }
