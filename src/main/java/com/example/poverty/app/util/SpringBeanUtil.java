@@ -1,4 +1,4 @@
-package com.example.poverty.app;
+package com.example.poverty.app.util;
 
 import org.springframework.beans.BeansException;
 import org.springframework.context.ApplicationContext;
